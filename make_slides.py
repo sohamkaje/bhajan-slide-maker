@@ -35,6 +35,36 @@ def _without_service_bookends(names: list[str]) -> list[str]:
     return names
 
 
+def generate_deck(
+    names: list[str],
+    output: Path,
+    *,
+    template: Path | None = None,
+    bookends: bool = True,
+    on_hit=None,
+) -> tuple[Path, list]:
+    """Match names on Sai Rhythms and write a PowerPoint. Names are used in order."""
+    template = template or TEMPLATE
+    names = list(names)
+    if bookends:
+        names = _without_service_bookends(names)
+    if not names:
+        raise ValueError("No bhajan names found in that list.")
+    if not template.exists():
+        raise FileNotFoundError("Missing template.pptx. Keep the bhajan slide template in this folder.")
+    songs = load_songs(CACHE)
+    hits = []
+    for number, name in enumerate(names, start=1):
+        hit = match_bhajan(name, songs)
+        if hit.found:
+            apply_song_page(hit, PAGE_CACHE)
+        hits.append(hit)
+        if on_hit:
+            on_hit(number, hit)
+    path = build_pptx(template, hits, output, bookends=bookends)
+    return path, hits
+
+
 def main(argv: list[str] | None = None) -> int:
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -68,21 +98,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Reading {len(names)} bhajan{'s' if len(names) != 1 else ''} in order.")
     print("Loading Sai Rhythms...")
-    songs = load_songs(CACHE, refresh=args.refresh)
-    print(f"Searching {len(songs)} songs.")
-
-    hits = []
-    for number, name in enumerate(names, start=1):
-        hit = match_bhajan(name, songs)
-        if hit.found:
-            apply_song_page(hit, PAGE_CACHE)
-        hits.append(hit)
-        if hit.found:
-            extra = f"  ({hit.note})" if hit.note else ""
-            print(f"{number:>2}. {name}")
-            print(f"    {hit.url}{extra}")
-        else:
-            print(f"{number:>2}. {name}  ->  NOT FOUND")
+    if args.refresh:
+        load_songs(CACHE, refresh=True)
 
     output = args.output
     if output is None:
@@ -98,7 +115,26 @@ def main(argv: list[str] | None = None) -> int:
     if output.name != requested.name:
         print(f"That file name is not allowed on Windows. Saving as {output.name}")
 
-    output = build_pptx(template, hits, output, bookends=not args.no_bookends)
+    def _report(number: int, hit) -> None:
+        if hit.found:
+            extra = f"  ({hit.note})" if hit.note else ""
+            print(f"{number:>2}. {hit.query}")
+            print(f"    {hit.url}{extra}")
+        else:
+            print(f"{number:>2}. {hit.query}  ->  NOT FOUND")
+
+    try:
+        output, hits = generate_deck(
+            names,
+            output,
+            template=template,
+            bookends=not args.no_bookends,
+            on_hit=_report,
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
     found = sum(1 for hit in hits if hit.found)
     print(f"Wrote {output}")
     print(f"Lyrics found for {found} of {len(hits)}.")

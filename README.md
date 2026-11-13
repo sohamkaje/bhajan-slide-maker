@@ -8,6 +8,17 @@ If a name cannot be matched, that slide keeps the title you typed and the lyric 
 
 `<CANNOT FIND LYRICS ON SAIRHYTHMS; INPUT HERE>`
 
+## Website
+
+From this folder:
+
+```powershell
+python -m pip install -r requirements.txt
+python app.py
+```
+
+Open http://127.0.0.1:5050. Paste one bhajan per line, or upload a `.txt` file, then choose Make slides. Download pptx appears when the file is ready. Preview shows each slide.
+
 ## Setup
 
 Python 3.12 is required. From this folder:

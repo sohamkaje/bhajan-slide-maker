@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bhajan slides</title>
+  <style>
+    body { font-family: Georgia, "Times New Roman", serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; background: #f7f7f5; }
+    h1 { font-size: 1.6rem; font-weight: normal; margin-bottom: 0.3rem; }
+    p { line-height: 1.4; }
+    textarea { width: 100%; height: 240px; box-sizing: border-box; font: 16px/1.45 ui-monospace, Consolas, monospace; padding: 0.6rem; }
+    label { display: block; margin: 0.8rem 0 0.3rem; }
+    input[type="text"] { width: 100%; box-sizing: border-box; padding: 0.4rem; font: 16px sans-serif; }
+    button, .btn { font: 16px sans-serif; padding: 0.45rem 0.8rem; cursor: pointer; background: #1a1a1a; color: #fff; border: 0; text-decoration: none; display: inline-block; }
+    button.secondary { background: #fff; color: #1a1a1a; border: 1px solid #1a1a1a; margin-left: 0.4rem; }
+    .hidden { display: none; }
+    #status { min-height: 1.2rem; }
+    .error { color: #8d1d1d; }
+    .slide { background: #071a66; color: #fff; padding: 1.1rem 1.2rem 0.8rem; margin: 0 0 0.8rem; }
+    .slide h2 { color: #ffc000; font-size: 1.35rem; margin: 0 0 0.7rem; font-weight: bold; }
+    .slide p { margin: 0.25rem 0; font-size: 1.05rem; }
+    .slide .meaning { color: #d2d2d2; font-style: italic; font-size: 0.95rem; margin-top: 0.8rem; }
+    .slide .next { text-align: right; margin-top: 0.9rem; color: #ffc000; font-size: 0.9rem; }
+    .slide .next span { color: #d2d2d2; }
+    .slide.center { text-align: center; }
+    .slide.center .body { font-size: 1.5rem; padding: 2.2rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Bhajan slides</h1>
+  <p>Paste one bhajan per line, or upload a .txt file. A new line can also be written as <code>\n</code> or <code>/n</code>.</p>
+  <form id="form">
+    <textarea name="list" placeholder="Gowri Ganesha Vinayaka&#10;Deena Natha Sai Guru Natha"></textarea>
+    <label>Or choose a text file <input type="file" name="file" accept=".txt,text/plain"></label>
+    <label>PowerPoint file name <input type="text" name="filename" placeholder="Saturday session.pptx"></label>
+    <p><button type="submit" id="make">Make slides</button></p>
+    <p id="status"></p>
+  </form>
+  <div id="result" class="hidden">
+    <p id="summary"></p>
+    <p>
+      <a id="download" class="btn" href="#">Download pptx</a>
+      <button type="button" class="secondary" id="preview-btn">Preview</button>
+    </p>
+    <div id="preview" class="hidden"></div>
+  </div>
+  <script>
+    const form = document.getElementById("form");
+    const status = document.getElementById("status");
+    const result = document.getElementById("result");
+    const preview = document.getElementById("preview");
+    const make = document.getElementById("make");
+
+    function line(parent, className, text) {
+      const node = document.createElement("p");
+      if (className) node.className = className;
+      node.textContent = text;
+      parent.appendChild(node);
+    }
+
+    function showPreview(slides) {
+      preview.replaceChildren();
+      slides.forEach(function (slide) {
+        const card = document.createElement("article");
+        card.className = slide.center ? "slide center" : "slide";
+        const heading = document.createElement("h2");
+        heading.textContent = slide.title;
+        card.appendChild(heading);
+        if (slide.center) {
+          const body = document.createElement("div");
+          body.className = "body";
+          body.textContent = (slide.lines || []).join(" ");
+          card.appendChild(body);
+        } else {
+          (slide.lines || []).forEach(function (item) { line(card, "", item); });
+          if (slide.meaning) line(card, "meaning", slide.meaning);
+        }
+        if (slide.next) {
+          const next = document.createElement("p");
+          next.className = "next";
+          const label = document.createElement("span");
+          label.textContent = "Next: ";
+          next.appendChild(label);
+          next.appendChild(document.createTextNode(slide.next));
+          card.appendChild(next);
+        }
+        preview.appendChild(card);
+      });
+      preview.classList.remove("hidden");
+    }
+
+    document.getElementById("preview-btn").addEventListener("click", function () {
+      if (!result.dataset.slides) return;
+      if (preview.classList.contains("hidden")) {
+        showPreview(JSON.parse(result.dataset.slides));
+        this.textContent = "Hide preview";
+      } else {
+        preview.classList.add("hidden");
+        this.textContent = "Preview";
+      }
+    });
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      status.textContent = "Searching Sai Rhythms and building the slides. This can take a minute.";
+      status.className = "";
+      result.classList.add("hidden");
+      preview.classList.add("hidden");
+      make.disabled = true;
+      try {
+        const response = await fetch("/generate", { method: "POST", body: new FormData(form) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not make the slides.");
+        status.textContent = "";
+        document.getElementById("summary").textContent =
+          "Lyrics found for " + data.found + " of " + data.total + ". File: " + data.filename;
+        const download = document.getElementById("download");
+        download.href = "/download/" + data.token;
+        download.setAttribute("download", data.filename);
+        result.classList.remove("hidden");
+        document.getElementById("preview-btn").textContent = "Preview";
+        result.dataset.slides = JSON.stringify(data.slides);
+      } catch (error) {
+        status.textContent = error.message;
+        status.className = "error";
+      } finally {
+        make.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
