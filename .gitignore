@@ -1,7 +1,6 @@
 __pycache__/
 *.pyc
 output/
-archive/
 cache/
 _theme_snip.txt
 _layout_bg.txt
