@@ -50,6 +50,9 @@
     const result = document.getElementById("result");
     const preview = document.getElementById("preview");
     const make = document.getElementById("make");
+    let slidesData = [];
+    let pptxFile = "";
+    let pptxName = "bhajans.pptx";
 
     function line(parent, className, text) {
       const node = document.createElement("p");
@@ -89,10 +92,27 @@
       preview.classList.remove("hidden");
     }
 
+    document.getElementById("download").addEventListener("click", function (event) {
+      if (!pptxFile) return;
+      event.preventDefault();
+      const binary = atob(pptxFile);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], {type: "application/vnd.openxmlformats-officedocument.presentationml.presentation"});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = pptxName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    });
+
     document.getElementById("preview-btn").addEventListener("click", function () {
-      if (!result.dataset.slides) return;
+      if (!slidesData.length) return;
       if (preview.classList.contains("hidden")) {
-        showPreview(JSON.parse(result.dataset.slides));
+        showPreview(slidesData);
         this.textContent = "Hide preview";
       } else {
         preview.classList.add("hidden");
@@ -117,9 +137,11 @@
         const download = document.getElementById("download");
         download.href = "/download/" + data.token;
         download.setAttribute("download", data.filename);
+        pptxFile = data.pptx || "";
+        pptxName = data.filename || "bhajans.pptx";
+        slidesData = data.slides || [];
         result.classList.remove("hidden");
         document.getElementById("preview-btn").textContent = "Preview";
-        result.dataset.slides = JSON.stringify(data.slides);
       } catch (error) {
         status.textContent = error.message;
         status.className = "error";

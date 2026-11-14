@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import re
 import uuid
 from pathlib import Path
@@ -12,11 +13,11 @@ from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.oxml.ns import qn
 
 from bhajan_slides.parse_list import parse_bhajan_text
-from make_slides import ROOT, generate_deck
+from make_slides import generate_deck, writable_root
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 1_000_000
-STORE = ROOT / "output" / "web"
+STORE = writable_root() / "output" / "web"
 TOKEN_RE = re.compile(r"^[0-9a-f]{32}$")
 
 
@@ -131,6 +132,7 @@ def generate():
         found=found,
         total=len(hits),
         slides=_slide_preview(path),
+        pptx=base64.b64encode(path.read_bytes()).decode("ascii"),
     )
 
 

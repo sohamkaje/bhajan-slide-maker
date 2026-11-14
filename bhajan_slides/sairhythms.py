@@ -50,37 +50,65 @@ class SongHit:
     note: str = ""
 
 
-def load_songs(cache_path: Path, refresh: bool = False) -> list[dict]:
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    if cache_path.exists() and not refresh:
-        age = time.time() - cache_path.stat().st_mtime
-        if age < CACHE_DAYS * 86400:
-            payload = json.loads(cache_path.read_text(encoding="utf-8"))
-            songs = payload["songs"]
-            _prepare(songs)
-            return songs
+def _songs_from_file(path: Path) -> list[dict]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    songs = payload["songs"]
+    _prepare(songs)
+    return songs
 
-    request = urllib.request.Request(
-        API_URL,
-        data=b"action=load_resource&resource=search",
-        headers={
-            "User-Agent": "Mozilla/5.0 (bhajan-slide-maker)",
-            "Referer": SONG_SITE + "/",
-            "Origin": SONG_SITE,
-            "X-Requested-With": "XMLHttpRequest",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json, text/javascript, */*; q=0.01",
-        },
-    )
-    with urllib.request.urlopen(request, timeout=90) as response:
-        outer = json.loads(response.read().decode("utf-8"))
-    if "data" not in outer:
-        raise RuntimeError(outer.get("error") or "Sai Rhythms did not return a song list.")
-    songs = json.loads(outer["data"])
-    cache_path.write_text(
-        json.dumps({"resource_version": outer.get("resource_version"), "songs": songs}, ensure_ascii=False),
-        encoding="utf-8",
-    )
+
+def _cache_is_fresh(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    age = time.time() - path.stat().st_mtime
+    return age < CACHE_DAYS * 86400
+
+
+def load_songs(cache_path: Path, refresh: bool = False, bundled_path: Path | None = None) -> list[dict]:
+    """Load the catalogue from a writable cache, a shipped copy, or Sai Rhythms.
+
+    Vercel cannot write inside the deployed app, so a fresh bundled file is used
+    as-is. A newer download is saved only when the cache folder can be written.
+    """
+    bundled = bundled_path if bundled_path and bundled_path.is_file() else None
+    if not refresh and _cache_is_fresh(cache_path):
+        return _songs_from_file(cache_path)
+    if not refresh and bundled is not None and _cache_is_fresh(bundled):
+        return _songs_from_file(bundled)
+
+    try:
+        request = urllib.request.Request(
+            API_URL,
+            data=b"action=load_resource&resource=search",
+            headers={
+                "User-Agent": "Mozilla/5.0 (bhajan-slide-maker)",
+                "Referer": SONG_SITE + "/",
+                "Origin": SONG_SITE,
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json, text/javascript, */*; q=0.01",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=45) as response:
+            outer = json.loads(response.read().decode("utf-8"))
+        if "data" not in outer:
+            raise RuntimeError(outer.get("error") or "Sai Rhythms did not return a song list.")
+        songs = json.loads(outer["data"])
+    except Exception:
+        if bundled is not None:
+            return _songs_from_file(bundled)
+        if cache_path.is_file():
+            return _songs_from_file(cache_path)
+        raise
+
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(
+            json.dumps({"resource_version": outer.get("resource_version"), "songs": songs}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
     _prepare(songs)
     return songs
 
@@ -144,23 +172,29 @@ def apply_song_page(hit: SongHit, cache_dir: Path) -> SongHit:
         return hit
     slug = hit.url.rstrip("/").rsplit("/", 1)[-1]
     cache_file = cache_dir / "pages" / f"{slug}.json"
-    if cache_file.exists():
-        saved = json.loads(cache_file.read_text(encoding="utf-8"))
-    else:
-        request = urllib.request.Request(
-            hit.url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (bhajan-slide-maker)",
-                "Referer": SONG_SITE + "/",
-                "Accept": "text/html",
-            },
-        )
-        with urllib.request.urlopen(request, timeout=60) as response:
-            html = response.read().decode("utf-8", "replace")
-        lyrics, meaning = lyrics_from_page(html)
-        saved = {"lyrics": lyrics, "meaning": meaning, "url": hit.url}
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-        cache_file.write_text(json.dumps(saved, ensure_ascii=False), encoding="utf-8")
+    try:
+        if cache_file.exists():
+            saved = json.loads(cache_file.read_text(encoding="utf-8"))
+        else:
+            request = urllib.request.Request(
+                hit.url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (bhajan-slide-maker)",
+                    "Referer": SONG_SITE + "/",
+                    "Accept": "text/html",
+                },
+            )
+            with urllib.request.urlopen(request, timeout=15) as response:
+                html = response.read().decode("utf-8", "replace")
+            lyrics, meaning = lyrics_from_page(html)
+            saved = {"lyrics": lyrics, "meaning": meaning, "url": hit.url}
+            try:
+                cache_file.parent.mkdir(parents=True, exist_ok=True)
+                cache_file.write_text(json.dumps(saved, ensure_ascii=False), encoding="utf-8")
+            except OSError:
+                pass
+    except (OSError, TimeoutError, ValueError, json.JSONDecodeError):
+        return hit
     if saved.get("lyrics"):
         hit.lyrics = saved["lyrics"]
     if saved.get("meaning"):

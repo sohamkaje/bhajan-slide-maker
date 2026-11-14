@@ -19,6 +19,8 @@ python app.py
 
 Open http://127.0.0.1:5050. Paste one bhajan per line, or upload a `.txt` file, then choose Make slides. Download pptx appears when the file is ready. Preview shows each slide.
 
+Vercel runs this same Flask app from `app.py`. The song list ships in `data/sairhythms.json`, so the hosted site does not write inside the deployment folder. Finished decks are built in the temporary folder and returned with the download button. `vercel.json` allows the function up to 5 minutes, which is the longest a Hobby project can run. Push `main` to the connected GitHub repository and Vercel rebuilds the site.
+
 ## Setup
 
 Python 3.12 is required. From this folder:
