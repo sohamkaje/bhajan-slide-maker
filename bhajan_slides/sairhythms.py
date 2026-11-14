@@ -15,6 +15,7 @@ from pathlib import Path
 API_URL = "https://sairhythms.sathyasai.org/song/signup/api"
 SONG_SITE = "https://sairhythms.sathyasai.org"
 MISSING_LYRICS = "<CANNOT FIND LYRICS ON SAIRHYTHMS; INPUT HERE>"
+MISSING_MEANING = "<CANNOT FIND MEANING ON SAIRHYTHMS; INPUT HERE>"
 CACHE_DAYS = 7
 
 # Safe transliteration folds applied to both the query and the catalogue.

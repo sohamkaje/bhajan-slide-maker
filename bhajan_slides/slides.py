@@ -12,7 +12,7 @@ from pptx import Presentation
 from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.oxml.ns import qn
 
-from bhajan_slides.sairhythms import MISSING_LYRICS, SongHit, lyric_lines
+from bhajan_slides.sairhythms import MISSING_LYRICS, MISSING_MEANING, SongHit, lyric_lines
 
 A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 _UNSAFE_FILENAME = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
@@ -120,7 +120,8 @@ def _fill_bhajan_slide(slide, hit: SongHit, coming: str, slide_width: int) -> No
     body = _content_shape(slide)
     if body is not None:
         lines = lyric_lines(hit.lyrics) or [MISSING_LYRICS]
-        _set_body(body, lines, hit.meaning if hit.found else "")
+        meaning = hit.meaning if hit.found else MISSING_MEANING
+        _set_body(body, lines, meaning)
     _set_next_line(slide, coming, slide_width)
 
 
@@ -158,6 +159,10 @@ def _paragraph(text: str, kind: str):
         run = etree.SubElement(paragraph, f"{{{A_NS}}}r")
         run_props = etree.SubElement(run, f"{{{A_NS}}}rPr")
         run_props.set("lang", "en-US")
+        if kind == "meaning":
+            run_props.set("sz", "1900")
+            run_props.set("i", "1")
+            _gray(run_props, "D2D2D2")
         node = etree.SubElement(run, f"{{{A_NS}}}t")
         node.text = text
     etree.SubElement(paragraph, f"{{{A_NS}}}endParaRPr")

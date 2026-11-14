@@ -8,6 +8,10 @@ If a name cannot be matched, that slide keeps the title you typed and the lyric 
 
 `<CANNOT FIND LYRICS ON SAIRHYTHMS; INPUT HERE>`
 
+The meaning line is kept on that slide, in the same italic style, with:
+
+`<CANNOT FIND MEANING ON SAIRHYTHMS; INPUT HERE>`
+
 ## Website
 
 From this folder:
