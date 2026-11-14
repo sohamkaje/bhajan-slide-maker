@@ -17,7 +17,7 @@ python -m pip install -r requirements.txt
 python app.py
 ```
 
-Open http://127.0.0.1:5050. Paste one bhajan per line, or upload a `.txt` file, then choose Make slides. Download pptx appears when the file is ready. Preview shows each slide.
+Open http://127.0.0.1:5050. Paste one bhajan per line, or upload a `.txt` file, then choose Make slides. Download pptx appears when the file is ready. Preview shows each slide. The deck is also kept in the `archive` folder, so finished files stay out of the project folder.
 
 Vercel runs this same Flask app from `app.py`. The song list ships in `data/sairhythms.json`, so the hosted site does not write inside the deployment folder. Finished decks are built in the temporary folder and returned with the download button. `vercel.json` allows the function up to 5 minutes, which is the longest a Hobby project can run. Push `main` to the connected GitHub repository and Vercel rebuilds the site.
 
@@ -52,7 +52,7 @@ Run:
 python make_slides.py sample_list.txt
 ```
 
-The deck is written to `output/sample_list.pptx`.
+The deck is written to `archive/sample_list.pptx`.
 
 To choose the file name:
 
@@ -72,7 +72,7 @@ Lyrics and the meaning are read from those pages. The slide order is the list or
 ## Check the result
 
 1. Run the sample command above.
-2. Open `output/sample_list.pptx`.
+2. Open `archive/sample_list.pptx`.
 3. Confirm the slides run AUM, then the four bhajans in the order above, then Om Shanthi.
 4. On Gowri Ganesha Vinayaka, the first lyric line is `Gowri Ganesha Vinayaka (3)`, followed by the other lines and the meaning underneath.
 5. The gold text at the lower right of each slide is the next title. The last bhajan points to Om Shanthi, and Om Shanthi points to Meditation.
@@ -82,6 +82,16 @@ Lyrics and the meaning are read from those pages. The slide order is the list or
 ```powershell
 python make_slides.py example_bhajans.txt -o "Nov 08 check.pptx"
 ```
+
+## Song list refresh
+
+`data/sairhythms.json` is the song list shipped with the app. Refresh it from Sai Rhythms with:
+
+```powershell
+python refresh_catalogue.py
+```
+
+Task Scheduler runs that command every day at 6:00 AM under the name "Bhajan catalogue refresh", when this computer is on. A failed download leaves the current file unchanged. The online Vercel site keeps using the copy from the last deploy until this updated file is pushed.
 
 ## Other options
 

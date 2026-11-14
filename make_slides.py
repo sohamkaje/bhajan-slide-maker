@@ -49,6 +49,7 @@ def writable_root() -> Path:
 CACHE = writable_root() / "cache" / "sairhythms.json"
 PAGE_CACHE = writable_root() / "cache"
 BUNDLED_CACHE = ROOT / "data" / "sairhythms.json"
+ARCHIVE = writable_root() / "archive"
 
 
 def _without_service_bookends(names: list[str]) -> list[str]:
@@ -105,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         "source",
         help="Text, CSV, JSON, or Word file with one bhajan name per line. Numbered lists and bullets are fine.",
     )
-    parser.add_argument("-o", "--output", type=Path, help="Output .pptx path. Defaults to output/<list name>.pptx")
+    parser.add_argument("-o", "--output", type=Path, help="Output .pptx path. A file name is saved in archive/. Defaults to archive/<list name>.pptx")
     parser.add_argument("--template", type=Path, default=TEMPLATE, help="Deck template. Defaults to template.pptx")
     parser.add_argument("--refresh", action="store_true", help="Download a fresh Sai Rhythms catalogue")
     parser.add_argument("--no-bookends", action="store_true", help="Skip the AUM opening and Om Shanthi closing slides")
@@ -134,9 +135,11 @@ def main(argv: list[str] | None = None) -> int:
     if output is None:
         source_path = Path(args.source)
         stem = source_path.stem if source_path.exists() else "bhajans"
-        output = ROOT / "output" / f"{stem}.pptx"
-    elif not output.is_absolute():
-        output = Path.cwd() / output
+        output = ARCHIVE / f"{stem}.pptx"
+    elif output.is_absolute() or len(output.parts) > 1:
+        output = output if output.is_absolute() else Path.cwd() / output
+    else:
+        output = ARCHIVE / output.name
     if output.suffix.lower() != ".pptx":
         output = output.with_suffix(".pptx")
     requested = output

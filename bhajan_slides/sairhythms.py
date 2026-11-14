@@ -64,6 +64,42 @@ def _cache_is_fresh(path: Path) -> bool:
     return age < CACHE_DAYS * 86400
 
 
+def download_catalogue() -> tuple[list[dict], str | None]:
+    """Download the current Sai Rhythms song list. Raises if the site does not return songs."""
+    request = urllib.request.Request(
+        API_URL,
+        data=b"action=load_resource&resource=search",
+        headers={
+            "User-Agent": "Mozilla/5.0 (bhajan-slide-maker)",
+            "Referer": SONG_SITE + "/",
+            "Origin": SONG_SITE,
+            "X-Requested-With": "XMLHttpRequest",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json, text/javascript, */*; q=0.01",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=90) as response:
+        outer = json.loads(response.read().decode("utf-8"))
+    if "data" not in outer:
+        raise RuntimeError(outer.get("error") or "Sai Rhythms did not return a song list.")
+    songs = json.loads(outer["data"])
+    if not isinstance(songs, list) or not songs or not isinstance(songs[0], dict):
+        raise RuntimeError("Sai Rhythms returned an empty song list.")
+    version = outer.get("resource_version")
+    return songs, None if version is None else str(version)
+
+
+def save_catalogue(path: Path, songs: list[dict], version: str | None) -> None:
+    """Replace a catalogue file only after the new copy is fully written."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps({"resource_version": version, "songs": songs}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    temporary.replace(path)
+
+
 def load_songs(cache_path: Path, refresh: bool = False, bundled_path: Path | None = None) -> list[dict]:
     """Load the catalogue from a writable cache, a shipped copy, or Sai Rhythms.
 
@@ -77,23 +113,7 @@ def load_songs(cache_path: Path, refresh: bool = False, bundled_path: Path | Non
         return _songs_from_file(bundled)
 
     try:
-        request = urllib.request.Request(
-            API_URL,
-            data=b"action=load_resource&resource=search",
-            headers={
-                "User-Agent": "Mozilla/5.0 (bhajan-slide-maker)",
-                "Referer": SONG_SITE + "/",
-                "Origin": SONG_SITE,
-                "X-Requested-With": "XMLHttpRequest",
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json, text/javascript, */*; q=0.01",
-            },
-        )
-        with urllib.request.urlopen(request, timeout=45) as response:
-            outer = json.loads(response.read().decode("utf-8"))
-        if "data" not in outer:
-            raise RuntimeError(outer.get("error") or "Sai Rhythms did not return a song list.")
-        songs = json.loads(outer["data"])
+        songs, version = download_catalogue()
     except Exception:
         if bundled is not None:
             return _songs_from_file(bundled)
@@ -102,11 +122,7 @@ def load_songs(cache_path: Path, refresh: bool = False, bundled_path: Path | Non
         raise
 
     try:
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        cache_path.write_text(
-            json.dumps({"resource_version": outer.get("resource_version"), "songs": songs}, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        save_catalogue(cache_path, songs, version)
     except OSError:
         pass
     _prepare(songs)

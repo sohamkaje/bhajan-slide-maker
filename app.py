@@ -13,11 +13,11 @@ from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.oxml.ns import qn
 
 from bhajan_slides.parse_list import parse_bhajan_text
-from make_slides import generate_deck, writable_root
+from make_slides import ARCHIVE, generate_deck, writable_root
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 1_000_000
-STORE = writable_root() / "output" / "web"
+JOBS = writable_root() / "archive" / ".jobs"
 TOKEN_RE = re.compile(r"^[0-9a-f]{32}$")
 
 
@@ -32,11 +32,11 @@ def _list_text(raw: str) -> str:
 def _job_path(token: str) -> Path | None:
     if not TOKEN_RE.fullmatch(token or ""):
         return None
-    folder = STORE / token
-    if not folder.is_dir():
+    pointer = JOBS / token
+    if not pointer.is_file():
         return None
-    files = sorted(folder.glob("*.pptx"))
-    return files[0] if files else None
+    path = Path(pointer.read_text(encoding="utf-8").strip())
+    return path if path.is_file() else None
 
 
 def _is_meaning(paragraph) -> bool:
@@ -115,11 +115,13 @@ def generate():
     if not names:
         return jsonify(error="No bhajan names found. Put one name on each line."), 400
 
-    requested = (request.form.get("filename") or "").strip() or default_name
+    requested = Path((request.form.get("filename") or "").strip() or default_name).name
     token = uuid.uuid4().hex
-    destination = STORE / token / requested
+    destination = ARCHIVE / requested
     try:
         path, hits = generate_deck(names, destination)
+        JOBS.mkdir(parents=True, exist_ok=True)
+        (JOBS / token).write_text(str(path), encoding="utf-8")
     except ValueError as exc:
         return jsonify(error=str(exc)), 400
     except Exception as exc:
