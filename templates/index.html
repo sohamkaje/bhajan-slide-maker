@@ -5,44 +5,182 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bhajan slides</title>
   <style>
-    body { font-family: Georgia, "Times New Roman", serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; background: #f7f7f5; }
-    h1 { font-size: 1.6rem; font-weight: normal; margin-bottom: 0.3rem; }
-    p { line-height: 1.4; }
-    textarea { width: 100%; height: 240px; box-sizing: border-box; font: 16px/1.45 ui-monospace, Consolas, monospace; padding: 0.6rem; }
-    label { display: block; margin: 0.8rem 0 0.3rem; }
-    input[type="text"] { width: 100%; box-sizing: border-box; padding: 0.4rem; font: 16px sans-serif; }
-    button, .btn { font: 16px sans-serif; padding: 0.45rem 0.8rem; cursor: pointer; background: #1a1a1a; color: #fff; border: 0; text-decoration: none; display: inline-block; }
-    button.secondary { background: #fff; color: #1a1a1a; border: 1px solid #1a1a1a; margin-left: 0.4rem; }
+    :root {
+      --navy: #071a66;
+      --gold: #ffc000;
+      --ink: #1c2430;
+      --muted: #6e675c;
+      --paper: #f4efe6;
+      --line: #e3d9c6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Segoe UI", Candara, sans-serif;
+      background:
+        radial-gradient(900px 280px at 50% -120px, #1a3484 0%, transparent 70%),
+        var(--paper);
+    }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 2.6rem 1.2rem 3rem; }
+    header h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: normal;
+      font-size: 2.15rem;
+      letter-spacing: 0.01em;
+      color: var(--navy);
+    }
+    header p { margin: 0.4rem 0 1.3rem; color: var(--muted); }
+    .card {
+      background: #fffdf8;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--gold);
+      padding: 1rem;
+      box-shadow: 0 16px 40px rgba(7, 26, 102, 0.07);
+    }
+    .choices { display: flex; gap: 0.75rem; align-items: stretch; }
+    .choice {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 0.85rem;
+      transition: opacity 0.15s ease, background 0.15s ease;
+    }
+    .choice h2 {
+      margin: 0 0 0.55rem;
+      font-size: 0.75rem;
+      font-weight: 650;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--navy);
+    }
+    .or {
+      align-self: center;
+      color: #b8860b;
+      font-family: Georgia, serif;
+      font-style: italic;
+    }
+    textarea, input[type="text"] {
+      width: 100%;
+      border: 1px solid #ddd4c4;
+      background: #fffefb;
+      color: var(--ink);
+      padding: 0.55rem 0.6rem;
+      font: 15px/1.45 Consolas, "Courier New", monospace;
+    }
+    textarea { height: 190px; resize: vertical; }
+    input[type="text"] { font-family: "Segoe UI", Candara, sans-serif; font-size: 16px; }
+    .file-box {
+      height: 190px;
+      border: 1px dashed #c9b27a;
+      background: #fffaf0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      text-align: center;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0.8rem;
+    }
+    .file-box strong { color: var(--navy); font-weight: 650; }
+    .file-box input { display: none; }
+    .choice.is-off { opacity: 0.42; background: #f3f0ea; pointer-events: none; }
+    .choice.is-off textarea,
+    .choice.is-off .file-box { cursor: not-allowed; background: #eeeae3; }
+    .name { display: block; margin-top: 0.95rem; }
+    .name span, .file-name {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.75rem;
+      font-weight: 650;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--navy);
+    }
+    .file-name { margin: 0; letter-spacing: 0.02em; text-transform: none; font-size: 0.95rem; }
+    .actions { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.9rem; }
+    button, .btn {
+      font: 15px "Segoe UI", Candara, sans-serif;
+      padding: 0.55rem 0.95rem;
+      cursor: pointer;
+      background: var(--navy);
+      color: #fff;
+      border: 1px solid var(--navy);
+      text-decoration: none;
+      display: inline-block;
+    }
+    button:hover, .btn:hover { background: #10257f; }
+    button.secondary, .text-btn {
+      background: transparent;
+      color: var(--navy);
+    }
+    button:disabled { opacity: 0.55; cursor: wait; }
     .hidden { display: none; }
-    #status { min-height: 1.2rem; }
+    #status { min-height: 1.3rem; margin: 0.7rem 0 0; }
     .error { color: #8d1d1d; }
+    #result { margin-top: 1.2rem; }
     .slide { background: #071a66; color: #fff; padding: 1.1rem 1.2rem 0.8rem; margin: 0 0 0.8rem; }
-    .slide h2 { color: #ffc000; font-size: 1.35rem; margin: 0 0 0.7rem; font-weight: bold; }
+    .slide h2 { color: var(--gold); font-size: 1.35rem; margin: 0 0 0.7rem; font-weight: bold; letter-spacing: 0; text-transform: none; }
     .slide p { margin: 0.25rem 0; font-size: 1.05rem; }
     .slide .meaning { color: #d2d2d2; font-style: italic; font-size: 0.95rem; margin-top: 0.8rem; }
-    .slide .next { text-align: right; margin-top: 0.9rem; color: #ffc000; font-size: 0.9rem; }
+    .slide .next { text-align: right; margin-top: 0.9rem; color: var(--gold); font-size: 0.9rem; }
     .slide .next span { color: #d2d2d2; }
     .slide.center { text-align: center; }
     .slide.center .body { font-size: 1.5rem; padding: 2.2rem 0; }
+    @media (max-width: 520px) {
+      .choices { flex-direction: column; }
+      .or { text-align: center; }
+    }
   </style>
 </head>
 <body>
-  <h1>Bhajan slides</h1>
-  <p>Paste one bhajan per line, or upload a .txt file. A new line can also be written as <code>\n</code> or <code>/n</code>.</p>
-  <form id="form">
-    <textarea name="list" placeholder="Gowri Ganesha Vinayaka&#10;Deena Natha Sai Guru Natha"></textarea>
-    <label>Or choose a text file <input type="file" name="file" accept=".txt,text/plain"></label>
-    <label>PowerPoint file name <input type="text" name="filename" placeholder="Saturday session.pptx"></label>
-    <p><button type="submit" id="make">Make slides</button></p>
-    <p id="status"></p>
-  </form>
-  <div id="result" class="hidden">
-    <p id="summary"></p>
-    <p>
-      <a id="download" class="btn" href="#">Download pptx</a>
-      <button type="button" class="secondary" id="preview-btn">Preview</button>
-    </p>
-    <div id="preview" class="hidden"></div>
+  <div class="wrap">
+    <header>
+      <h1>Bhajan slides</h1>
+      <p>One list, in the order you write it. Paste the names or upload a .txt file.</p>
+    </header>
+    <form id="form">
+      <div class="card">
+        <div class="choices">
+          <section class="choice" id="paste-choice">
+            <h2>Paste the list</h2>
+            <textarea name="list" placeholder="Gowri Ganesha Vinayaka&#10;Deena Natha Sai Guru Natha"></textarea>
+          </section>
+          <div class="or">or</div>
+          <section class="choice" id="file-choice">
+            <h2>Upload a .txt file</h2>
+            <label class="file-box">
+              <input type="file" name="file" accept=".txt,text/plain">
+              <strong>Choose a text file</strong>
+              <span id="file-hint">One bhajan name on each line.</span>
+            </label>
+            <p id="file-name" class="file-name hidden"></p>
+            <button type="button" class="text-btn hidden" id="clear-file">Remove file</button>
+          </section>
+        </div>
+        <label class="name">
+          <span>PowerPoint file name</span>
+          <input type="text" name="filename" placeholder="Saturday session.pptx">
+        </label>
+      </div>
+      <div class="actions">
+        <button type="submit" id="make">Make slides</button>
+      </div>
+      <p id="status"></p>
+    </form>
+    <div id="result" class="hidden">
+      <p id="summary"></p>
+      <p>
+        <a id="download" class="btn" href="#">Download pptx</a>
+        <button type="button" class="secondary" id="preview-btn">Preview</button>
+      </p>
+      <div id="preview" class="hidden"></div>
+    </div>
   </div>
   <script>
     const form = document.getElementById("form");
@@ -50,9 +188,51 @@
     const result = document.getElementById("result");
     const preview = document.getElementById("preview");
     const make = document.getElementById("make");
+    const list = form.elements.list;
+    const file = form.elements.file;
+    const pasteChoice = document.getElementById("paste-choice");
+    const fileChoice = document.getElementById("file-choice");
+    const fileName = document.getElementById("file-name");
+    const clearFile = document.getElementById("clear-file");
     let slidesData = [];
     let pptxFile = "";
     let pptxName = "bhajans.pptx";
+
+    function syncChoice() {
+      const hasText = list.value.trim().length > 0;
+      const hasFile = file.files && file.files.length > 0;
+      list.disabled = hasFile;
+      file.disabled = hasText;
+      pasteChoice.classList.toggle("is-off", hasFile);
+      fileChoice.classList.toggle("is-off", hasText);
+      if (hasFile) {
+        fileName.textContent = file.files[0].name;
+        fileName.classList.remove("hidden");
+        clearFile.classList.remove("hidden");
+      } else {
+        fileName.textContent = "";
+        fileName.classList.add("hidden");
+        clearFile.classList.add("hidden");
+      }
+    }
+
+    list.addEventListener("input", syncChoice);
+    file.addEventListener("change", function () {
+      const chosen = file.files && file.files[0];
+      if (chosen && !chosen.name.toLowerCase().endsWith(".txt")) {
+        file.value = "";
+        status.textContent = "Upload a .txt file.";
+        status.className = "error";
+      } else if (status.className === "error" && status.textContent === "Upload a .txt file.") {
+        status.textContent = "";
+        status.className = "";
+      }
+      syncChoice();
+    });
+    clearFile.addEventListener("click", function () {
+      file.value = "";
+      syncChoice();
+    });
 
     function line(parent, className, text) {
       const node = document.createElement("p");
@@ -122,6 +302,15 @@
 
     form.addEventListener("submit", async function (event) {
       event.preventDefault();
+      const hasText = list.value.trim().length > 0;
+      const hasFile = file.files && file.files.length > 0;
+      if (hasText === hasFile) {
+        status.textContent = hasText
+          ? "Use either a pasted list or a text file."
+          : "Paste a list or choose a .txt file.";
+        status.className = "error";
+        return;
+      }
       status.textContent = "Searching Sai Rhythms and building the slides. This can take a minute.";
       status.className = "";
       result.classList.add("hidden");

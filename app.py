@@ -105,7 +105,11 @@ def generate():
     file_text = ""
     if upload and upload.filename:
         file_text = upload.read().decode("utf-8-sig", errors="replace")
-    if file_text.strip():
+    has_file = bool(file_text.strip())
+    has_text = bool(pasted.strip())
+    if has_file and has_text:
+        return jsonify(error="Use either a pasted list or a text file."), 400
+    if has_file:
         text = file_text
         default_name = Path(upload.filename).stem or "bhajans"
     else:
